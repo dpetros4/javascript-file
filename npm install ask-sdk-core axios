@@ -1,0 +1,72 @@
+const Alexa = require('ask-sdk-core');
+const axios = require('axios');
+
+const CHATGPT_API_URL = 'https://api.openai.com/v1/engines/davinci-codex/completions';
+const CHATGPT_API_KEY = 'YOUR_OPENAI_API_KEY';
+
+const LaunchRequestHandler = {
+  canHandle(handlerInput) {
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
+  },
+  async handle(handlerInput) {
+    const speakOutput = 'Welcome to ChatGPT. How can I assist you today?';
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .reprompt(speakOutput)
+      .getResponse();
+  }
+};
+
+const ChatGPTIntentHandler = {
+  canHandle(handlerInput) {
+    return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+      && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ChatGPTIntent';
+  },
+  async handle(handlerInput) {
+    const { request } = handlerInput.requestEnvelope;
+    const query = request.intent.slots.query.value;
+
+    const response = await axios.post(CHATGPT_API_URL, {
+      prompt: query,
+      max_tokens: 100,
+      n: 1,
+      stop: '\n',
+      temperature: 0.5
+    }, {
+      headers: {
+        'Authorization': `Bearer ${CHATGPT_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const message = response.data.choices[0].text.trim();
+    const speakOutput = `ChatGPT says ${message}`;
+
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .getResponse();
+  }
+};
+
+const ErrorHandler = {
+  canHandle() {
+    return true;
+  },
+  handle(handlerInput, error) {
+    console.error(`Error: ${error.message}`);
+
+    const speakOutput = 'Sorry, there was an error. Please try again later.';
+
+    return handlerInput.responseBuilder
+      .speak(speakOutput)
+      .getResponse();
+  },
+};
+
+exports.handler = Alexa.SkillBuilders.custom()
+  .addRequestHandlers(
+    LaunchRequestHandler,
+    ChatGPTIntentHandler
+  )
+  .addErrorHandlers(ErrorHandler)
+  .lambda();
