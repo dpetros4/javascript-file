@@ -70,3 +70,5 @@ exports.handler = Alexa.SkillBuilders.custom()
   )
   .addErrorHandlers(ErrorHandler)
   .lambda();
+npm install ask-sdk-core
+npm install axios
